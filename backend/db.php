@@ -16,7 +16,7 @@ header("Content-Type: application/json; charset=UTF-8");
 // Database connection settings
 $servername = "localhost";
 $username = "root";
-$password = ""; // Try empty first, change to "root123" if needed
+$password = "root123"; // Try empty first, change to "root123" if needed
 $dbname = "humai_db";
 
 // Attempt connection

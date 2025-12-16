@@ -1,251 +1,311 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
   Image,
-  Keyboard,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View
 } from "react-native";
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+} from "react-native-gesture-handler";
+// ✅ NEW IMPORT: For the eye icons
+import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
 
-const SERVER_URL = "http://172.16.54.179/HumAI/backend/login.php";
+// Assuming you are using the clean structure:
+// import { API } from "../../constants/Config"; 
+const SERVER_URL = "http://172.16.54.179/HumAI/backend/login.php"; // Using the fixed URL for continuity
+
+const { width } = Dimensions.get("window");
 
 export default function StudentLogin() {
   const router = useRouter();
+  
+  // --- STATE MANAGEMENT ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  // ✅ NEW STATE: For toggling password visibility
+  const [showPassword, setShowPassword] = useState(false); 
 
-  // Toast states
+  // --- ANIMATIONS & TOAST ---
   const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("error");
+  const [toastType, setToastType] = useState<"success" | "error">("error");
   const [toastVisible, setToastVisible] = useState(false);
-  const toastAnim = React.useRef(new Animated.Value(-80)).current;
+  const toastAnim = useRef(new Animated.Value(-80)).current;
 
-  const showToast = (msg: string, type = "error") => {
+  // --- HELPERS ---
+  const showToast = (msg: string, type: "success" | "error" = "error") => {
     setToastMsg(msg);
     setToastType(type);
     setToastVisible(true);
+    
     Animated.timing(toastAnim, {
-      toValue: 34,
-      duration: 280,
+      toValue: 40, 
+      duration: 300,
       useNativeDriver: false,
-      easing: Easing.out(Easing.cubic)
+      easing: Easing.out(Easing.back(1.5)),
     }).start(() => {
       setTimeout(() => {
         Animated.timing(toastAnim, {
           toValue: -80,
-          duration: 240,
+          duration: 250,
           useNativeDriver: false,
         }).start(() => setToastVisible(false));
-      }, 1800);
+      }, 2000);
     });
   };
 
-  const handleLogin = async () => {
+  const handleGesture = (event: PanGestureHandlerGestureEvent) => {
+    const { translationX, x } = event.nativeEvent;
+    if (x < 60 && translationX > 50) {
+      router.replace("/login-type");
+    }
+  };
+
+
+
+  
+  /* const handleLogin = async () => {
     Keyboard.dismiss();
 
     if (!email.trim() || !password.trim()) {
-      showToast("Please enter both email and password", "error");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      showToast("Please enter a valid email address", "error");
+      showToast("Please enter email and password.", "error");
       return;
     }
 
     setLoading(true);
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
       const response = await fetch(SERVER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password 
-        }),
-        signal: controller.signal,
+        body: JSON.stringify({ email, password }),
       });
 
-      clearTimeout(timeoutId);
+      const text = await response.text(); 
+      console.log(`[Response] ${text.substring(0, 100)}...`); 
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      try {
+        const result = JSON.parse(text);
+        
+        if (result.success) {
+            setLoading(false);
+            showToast("Login successful!", "success");
+            setTimeout(() => router.replace("/dashboard"), 900);
+        } else {
+            setLoading(false);
+            showToast(result.message || "Invalid credentials.", "error");
+        }
+      } catch (jsonError) {
+        console.error("JSON Error:", text);
+        setLoading(false);
+        showToast("Server Error. Check console for PHP fatal error.", "error");
       }
 
-      const result = await response.json();
-
-      if (result.success) {
-        showToast("Login successful! Welcome back.", "success");
-        setTimeout(() => router.replace("/dashboard"), 900);
-      } else {
-        showToast(result.message || "Invalid email or password", "error");
-      }
-    } catch (err: any) {
-      console.error("Login error:", err);
-      
-      if (err.name === 'AbortError') {
-        showToast("Request timeout. Please check your connection.", "error");
-      } else if (err.message.includes('Network')) {
-        showToast("No internet connection", "error");
-      } else if (err.message.includes('Server error')) {
-        showToast("Server error. Please try again later.", "error");
-      } else {
-        showToast("Cannot connect to server", "error");
-      }
-    } finally {
+    } catch (networkError) {
+      console.error("Network Error:", networkError);
       setLoading(false);
+      showToast("Cannot connect to server. Check IP and XAMPP.", "error");
     }
-  };
+  }; */
 
+
+
+
+
+
+
+
+// TEMPORARY BYPASS CODE
+
+// Inside your login-student.tsx file:
+
+const handleLogin = async () => {
+    // -----------------------------------------------------------
+    // 🛑 START TEMPORARY BYPASS CODE 🛑
+    // This code simulates a successful login to unblock the frontend.
+    // -----------------------------------------------------------
+    
+    // 1. Basic input check (still good practice)
+    if (!email.trim() || !password.trim()) {
+      showToast("Please enter email and password.", "error");
+      return;
+    }
+
+    setLoading(true);
+
+    // 2. Simulate network delay (gives a realistic feel)
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+    // 3. Simulate success response
+    const successfulLogin = true; 
+
+    if (successfulLogin) {
+        showToast("Bypass successful! Navigating to dashboard.", "success");
+        
+        // 4. Navigate to your dashboard route
+        // NOTE: Adjust the path if your dashboard is located differently (e.g., '/(app)/dashboard')
+        setTimeout(() => router.replace("/dashboard"), 500); 
+    } else {
+        // This path will never be hit with the current bypass logic
+        showToast("Bypass failed.", "error");
+    }
+
+    setLoading(false);
+    // -----------------------------------------------------------
+    // 🛑 END TEMPORARY BYPASS CODE 🛑
+    // -----------------------------------------------------------
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // --- UI RENDERING ---
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={["#18B949", "#1D492D"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.background}
-        >
-          {toastVisible && (
-            <Animated.View
-              style={[
-                styles.toast,
-                toastType === "success" ? styles.toastSuccess : styles.toastError,
-                { top: toastAnim, width: width - 44, left: 22 }
-              ]}
-            >
-              <Text style={[
-                styles.toastText,
-                toastType === "success" ? styles.toastTextSuccess : styles.toastTextError,
-              ]}>
-                {toastMsg}
-              </Text>
-            </Animated.View>
-          )}
-
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.replace("/login-type")}
-            activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PanGestureHandler
+        onGestureEvent={handleGesture}
+        activeOffsetX={[0, 20]}
+        failOffsetY={[-20, 20]}
+      >
+        <View style={{ flex: 1 }}>
+          <LinearGradient
+            colors={["#18B949", "#1D492D"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.background}
           >
-            <Image
-              source={require("../assets/icons/arrow-left.png")}
-              style={styles.backIcon}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.content}>
-            <View style={{ height: 28 }} />
-
-            {/* Logo Container */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={require("../assets/images/HumAI_logo.png")}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-
-            {/* Text Section */}
-            <View style={styles.textSection}>
-              <Text style={styles.subheading}>Student Login</Text>
-            </View>
-
-            <View style={{ height: 19 }} />
-
-            {/* Email Input */}
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="#b1ebd7"
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
-
-            {/* Password Input */}
-            <View style={styles.passwordContainer}>
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#b1ebd7"
-                secureTextEntry={!showPassword}
-                style={styles.passwordInput}
-                value={password}
-                onChangeText={setPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-                activeOpacity={0.7}
+            {/* Toast Notification */}
+            {toastVisible && (
+              <Animated.View
+                style={[
+                  styles.toast,
+                  toastType === "success" ? styles.toastSuccess : styles.toastError,
+                  { top: toastAnim, width: width - 44, left: 22 }
+                ]}
               >
-                <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={[
+                  styles.toastText,
+                  toastType === "success" ? styles.toastTextSuccess : styles.toastTextError,
+                ]}>
+                  {toastMsg}
+                </Text>
+              </Animated.View>
+            )}
 
-            {/* Login Button */}
+            {/* Back Button */}
             <TouchableOpacity
-              style={[
-                styles.button1,
-                loading && { backgroundColor: "#10953a90" }
-              ]}
-              onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.88}
+              style={styles.backButton}
+              onPress={() => router.replace("/login-type")}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
-              <Text style={styles.buttonText}>
-                {loading ? "Logging in..." : "Login"}
-              </Text>
+              <Image 
+                source={require("../assets/icons/arrow-left.png")} 
+                style={styles.backIcon} 
+              />
             </TouchableOpacity>
 
-            {/* Forgot Password */}
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => {
-                showToast("Feature coming soon!", "error");
-              }}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            <View style={styles.content}>
+              <View style={{ height: 28 }} />
 
-            {/* Sign Up Link */}
-            <View style={styles.signupRow}>
-              <Text style={styles.sign}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push("/signup")}>
-                <Text style={styles.signupText}> Sign Up</Text>
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require("../assets/images/HumAI_logo.png")}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <View style={styles.textSection}>
+                <Text style={styles.subheading}>Student Login</Text>
+              </View>
+
+              <View style={{ height: 19 }} />
+
+              {/* Inputs */}
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="#b1ebd7"
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              
+              {/* ✅ UPDATED PASSWORD INPUT WRAPPER */}
+              <View style={styles.passwordInputWrapper}>
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="#b1ebd7"
+                  // 💡 Use state to toggle visibility
+                  secureTextEntry={!showPassword} 
+                  style={[styles.input, styles.passwordInput]}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    {/* 💡 IONICONS Implementation */}
+                    <Ionicons 
+                        name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                        size={24} 
+                        color="#b1ebd7" 
+                    />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.button1,
+                  loading && { backgroundColor: "#10953a90" }
+                ]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.buttonText}>{loading ? "Logging in..." : "Login"}</Text>
               </TouchableOpacity>
+              
+              <View style={styles.signupRow}>
+                <Text style={styles.sign}>Don't have an account?</Text>
+                <TouchableOpacity onPress={() => router.push("/signup")}>
+                  <Text style={styles.signupText}> Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 36 }} />
             </View>
-            
-            <View style={{ height: 36 }} />
-          </View>
-        </LinearGradient>
-      </View>
-    </TouchableWithoutFeedback>
+          </LinearGradient>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
@@ -280,6 +340,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 2,
   },
+  // ❌ OLD INPUT STYLE IS NOW THE BASE
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.10)",
     width: 250,
@@ -295,33 +356,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 7,
   },
-  passwordContainer: {
+  
+  // ✅ NEW STYLES FOR PASSWORD TOGGLE
+  passwordInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: "rgba(255, 255, 255, 0.10)",
     width: 250,
-    borderRadius: 13,
     marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#18B949",
-    shadowColor: "#18B949",
-    shadowOpacity: 0.08,
-    shadowRadius: 7,
+    position: 'relative', // Necessary for absolute positioning of the icon
   },
   passwordInput: {
-    flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 17,
-    color: "#fff",
-    fontSize: 16,
+    flex: 1, // Ensures input takes up necessary space
+    marginBottom: 0, // Remove margin from the input when wrapped
+    paddingRight: 50, // Space for the icon
   },
-  eyeButton: {
-    padding: 10,
-    paddingRight: 15,
+  toggleButton: {
+    position: 'absolute',
+    right: 15,
+    padding: 5,
   },
-  eyeIcon: {
-    fontSize: 20,
-  },
+  
   button1: {
     backgroundColor: "#18B949",
     paddingVertical: 12,
@@ -337,36 +391,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3
   },
-  buttonText: { 
-    color: "#fff", 
-    fontSize: 18, 
-    fontWeight: "bold", 
-    letterSpacing: 0.5 
-  },
-  forgotPassword: {
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    color: "#b1ebd7",
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
+  buttonText: { color: "#fff", fontSize: 18, fontWeight: "bold", letterSpacing: 0.5 },
   signupRow: {
     flexDirection: "row",
-    marginTop: 8,
+    marginTop: 16,
     alignItems: "center",
     justifyContent: "center"
   },
-  sign: { 
-    fontSize: 14, 
-    color: "#fff" 
-  },
-  signupText: { 
-    fontSize: 14, 
-    fontWeight: "bold", 
-    color: "#b1ebd7" 
-  },
+  sign: { fontSize: 14, color: "#fff" },
+  signupText: { fontSize: 14, fontWeight: "bold", color: "#b1ebd7" }, 
   backButton: {
     position: "absolute",
     top: Platform.OS === "android" ? 44 : 70,
@@ -399,18 +432,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
     textAlign: "center",
   },
-  toastError: { 
-    borderLeftWidth: 7, 
-    borderLeftColor: "#b60e34" 
-  },
-  toastTextError: { 
-    color: "#b60e34" 
-  },
-  toastSuccess: { 
-    borderLeftWidth: 7, 
-    borderLeftColor: "#18B949" 
-  },
-  toastTextSuccess: { 
-    color: "#18B949" 
-  },
+  toastError: { borderLeftWidth: 7, borderLeftColor: "#b60e34" },
+  toastTextError: { color: "#b60e34" },
+  toastSuccess: { borderLeftWidth: 7, borderLeftColor: "#18B949" },
+  toastTextSuccess: { color: "#18B949" },
 });
