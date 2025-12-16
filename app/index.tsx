@@ -59,7 +59,7 @@ export default function LandingPage() {
           imageStyle={styles.bgImage}
         >
           <View style={styles.centerWrap}>
-            <View style={styles.logoCard}>
+            <View style={styles.logoContainer}>
               <Image
                 source={require("../assets/images/HumAI_logo.png")}
                 style={styles.logo}
@@ -67,9 +67,6 @@ export default function LandingPage() {
               />
             </View>
             <Text style={styles.appName}>HumAI</Text>
-            <Text style={styles.subtitle}>Smart Rice Disease Diagnostics</Text>
-            <View style={styles.divider} />
-            <Text style={styles.hintText}>Tap to Start</Text>
           </View>
         </ImageBackground>
       </Animated.View>
@@ -93,68 +90,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  logoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 90,
-    padding: 15,
+  logoContainer: {
     marginTop: -68,
     marginBottom: 24,
     alignItems: "center",
-    shadowColor: "#18B949",
-    shadowOpacity: 0.13,
-    shadowRadius: 12,
-    elevation: 11,
+    // Added horizontal padding to create space on the sides
+    paddingHorizontal: 50, 
   },
   logo: {
     width: 126,
     height: 126,
     borderRadius: 63,
-    borderColor: "#18B949",
-    borderWidth: 2,
   },
   appName: {
     fontSize: 48,
-    color: "#18B949",
+    color: "#FFFFFF",
     fontFamily: "IrishGrover",
-    fontWeight: "900",
+    fontWeight: "400",
     textAlign: "center",
     marginTop: 10,
     letterSpacing: 2,
     marginBottom: 7,
-    textShadowColor: "#00000020",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 2, height: 3 },
     textShadowRadius: 6,
-  },
-  subtitle: {
-    color: "#eee",
-    fontSize: 18,
-    textAlign: "center",
-    marginBottom: 10,
-    letterSpacing: 0.6,
-    fontWeight: "600"
-  },
-  divider: {
-    width: 52,
-    height: 3,
-    backgroundColor: "#18B949",
-    borderRadius: 2,
-    marginVertical: 8,
-    opacity: 0.66,
-  },
-  hintText: {
-    color: "#1D492D",
-    backgroundColor: "#e5fff0cc",
-    fontSize: 18,
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    textAlign: "center",
-    marginTop: 8,
-    letterSpacing: 0.7,
-    fontWeight: "bold",
-    elevation: 2,
-    shadowColor: "#18B94955",
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
   },
 });

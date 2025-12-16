@@ -12,11 +12,12 @@ export default function LoginType() {
       end={{ x: 0, y: 1 }}
       style={styles.background}
     >
-      {/* Back Button - FarmerLogin style */}
+      {/* Back Button - Simplified */}
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.replace("/")}
-        activeOpacity={0.88}
+        activeOpacity={0.7}
+        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Increases touch area without changing visuals
       >
         <Image
           source={require("../assets/icons/arrow-left.png")}
@@ -28,8 +29,8 @@ export default function LoginType() {
         {/* Spacer */}
         <View style={{ height: 28 }} />
 
-        {/* Logo Card */}
-        <View style={styles.logoCard}>
+        {/* Logo Container - Removed white card style */}
+        <View style={styles.logoContainer}>
           <Image
             source={require("../assets/images/HumAI_logo.png")}
             style={styles.logo}
@@ -37,9 +38,8 @@ export default function LoginType() {
           />
         </View>
 
-        {/* Headline and Subheading */}
+        {/* Text Section - Removed "Welcome Back!" */}
         <View style={styles.textSection}>
-          <Text style={styles.headline}>Welcome Back!</Text>
           <Text style={styles.subheading}>Sign in as...</Text>
         </View>
 
@@ -76,26 +76,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    // total vertical margin handled by local spacers
   },
-  logoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 110,
-    padding: 15,
+  logoContainer: {
+    // Removed background color, shadows, and padding
     marginBottom: 26,
     marginTop: 0,
-    shadowColor: "#18B949",
-    shadowOpacity: 0.11,
-    shadowRadius: 14,
-    elevation: 8,
     alignItems: "center",
   },
   logo: {
     width: 142,
     height: 142,
     borderRadius: 71,
-    borderColor: "#18B949",
-    borderWidth: 2,
+    // Removed border properties
   },
   textSection: {
     alignItems: "center",
@@ -103,17 +95,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 2,
   },
-  headline: {
-    fontSize: 27,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 7,
-    textAlign: "center",
-    letterSpacing: 0.9,
-  },
+  // Removed headline style
   subheading: {
-    fontSize: 18,
-    color: "#e9ffe5",
+    fontSize: 22, // Slightly larger since headline is gone
+    color: "#fff",
     textAlign: "center",
     fontWeight: "600",
     letterSpacing: 0.5,
@@ -155,20 +140,14 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     top: Platform.OS === "android" ? 44 : 70,
-    left: 18,
+    left: 24, // Adjusted slightly since padding is gone
     zIndex: 10,
-    backgroundColor: "#fff",
-    borderRadius: 19,
-    padding: 5,
-    elevation: 5,
-    shadowColor: "#18B949",
-    shadowOpacity: 0.11,
-    shadowRadius: 7,
+    // Removed background, border radius, and shadows
   },
   backIcon: {
-    width: 25,
-    height: 25,
+    width: 23,
+    height: 23,
     resizeMode: "contain",
-    tintColor: "#18B949",
+    tintColor: "#fff", // Changed to white to be visible on green
   },
 });

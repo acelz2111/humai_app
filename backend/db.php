@@ -1,12 +1,41 @@
 <?php
-$host = "localhost";     // usually localhost
-$user = "root";          // default XAMPP username
-$pass = "";              // default XAMPP password (empty string)
-$dbname = "humai_db1"; // <-- change to your DB name
+// backend/db.php
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+// Error reporting configuration
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Set to 0 in production
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/php_errors.log');
 
-if ($conn->connect_error) {
-    die(json_encode(["success" => false, "message" => "Database connection failed."]));
+// CORS headers
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json; charset=UTF-8");
+
+// Database connection settings
+$servername = "localhost";
+$username = "root";
+$password = ""; // Try empty first, change to "root123" if needed
+$dbname = "humai_db";
+
+// Attempt connection
+try {
+    $conn = @new mysqli($servername, $username, $password, $dbname);
+    
+    if ($conn->connect_error) {
+        throw new Exception("Connection Failed: " . $conn->connect_error);
+    }
+    
+    // Set charset to prevent encoding issues
+    $conn->set_charset("utf8mb4");
+    
+} catch (Exception $e) {
+    echo json_encode([
+        "success" => false, 
+        "message" => "Database connection error. Please try again later."
+    ]);
+    error_log("DB Connection Error: " . $e->getMessage());
+    exit();
 }
 ?>
