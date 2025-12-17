@@ -1,11 +1,14 @@
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ Added
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
   Image,
+  Keyboard,
   Platform,
   StyleSheet,
   Text,
@@ -18,13 +21,9 @@ import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
-// ✅ NEW IMPORT: For the eye icons
-import { Ionicons } from '@expo/vector-icons';
 
-
-// Assuming you are using the clean structure:
-// import { API } from "../../constants/Config"; 
-const SERVER_URL = "http://172.16.54.179/HumAI/backend/login.php"; // Using the fixed URL for continuity
+// Assume the correct path to the backend
+const SERVER_URL = "http://172.16.54.179/HumAI/backend/login.php";
 
 const { width } = Dimensions.get("window");
 
@@ -35,7 +34,6 @@ export default function StudentLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  // ✅ NEW STATE: For toggling password visibility
   const [showPassword, setShowPassword] = useState(false); 
 
   // --- ANIMATIONS & TOAST ---
@@ -73,10 +71,8 @@ export default function StudentLogin() {
     }
   };
 
-
-
-  
-  /* const handleLogin = async () => {
+  // --- MAIN LOGIN LOGIC (UPDATED) ---
+  const handleLogin = async () => {
     Keyboard.dismiss();
 
     if (!email.trim() || !password.trim()) {
@@ -87,6 +83,8 @@ export default function StudentLogin() {
     setLoading(true);
 
     try {
+      console.log(`[Connecting] ${SERVER_URL}`);
+
       const response = await fetch(SERVER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,17 +98,22 @@ export default function StudentLogin() {
         const result = JSON.parse(text);
         
         if (result.success) {
+            // ✅ CRITICAL: Save the User ID as a string
+            const userId = result.user.id.toString(); 
+            await AsyncStorage.setItem('user_id', userId); 
+            
             setLoading(false);
             showToast("Login successful!", "success");
-            setTimeout(() => router.replace("/dashboard"), 900);
+            
+            setTimeout(() => router.replace("/dashboard"), 900); 
         } else {
             setLoading(false);
             showToast(result.message || "Invalid credentials.", "error");
         }
       } catch (jsonError) {
-        console.error("JSON Error:", text);
+        console.error("JSON Error (Server Crash):", text);
         setLoading(false);
-        showToast("Server Error. Check console for PHP fatal error.", "error");
+        showToast("Server Error. Check XAMPP logs.", "error");
       }
 
     } catch (networkError) {
@@ -118,68 +121,7 @@ export default function StudentLogin() {
       setLoading(false);
       showToast("Cannot connect to server. Check IP and XAMPP.", "error");
     }
-  }; */
-
-
-
-
-
-
-
-
-// TEMPORARY BYPASS CODE
-
-// Inside your login-student.tsx file:
-
-const handleLogin = async () => {
-    // -----------------------------------------------------------
-    // 🛑 START TEMPORARY BYPASS CODE 🛑
-    // This code simulates a successful login to unblock the frontend.
-    // -----------------------------------------------------------
-    
-    // 1. Basic input check (still good practice)
-    if (!email.trim() || !password.trim()) {
-      showToast("Please enter email and password.", "error");
-      return;
-    }
-
-    setLoading(true);
-
-    // 2. Simulate network delay (gives a realistic feel)
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
-
-    // 3. Simulate success response
-    const successfulLogin = true; 
-
-    if (successfulLogin) {
-        showToast("Bypass successful! Navigating to dashboard.", "success");
-        
-        // 4. Navigate to your dashboard route
-        // NOTE: Adjust the path if your dashboard is located differently (e.g., '/(app)/dashboard')
-        setTimeout(() => router.replace("/dashboard"), 500); 
-    } else {
-        // This path will never be hit with the current bypass logic
-        showToast("Bypass failed.", "error");
-    }
-
-    setLoading(false);
-    // -----------------------------------------------------------
-    // 🛑 END TEMPORARY BYPASS CODE 🛑
-    // -----------------------------------------------------------
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
+  };
 
   // --- UI RENDERING ---
   return (
@@ -256,12 +198,11 @@ const handleLogin = async () => {
                 keyboardType="email-address"
               />
               
-              {/* ✅ UPDATED PASSWORD INPUT WRAPPER */}
+              {/* Password Input Wrapper */}
               <View style={styles.passwordInputWrapper}>
                 <TextInput
                   placeholder="Password"
                   placeholderTextColor="#b1ebd7"
-                  // 💡 Use state to toggle visibility
                   secureTextEntry={!showPassword} 
                   style={[styles.input, styles.passwordInput]}
                   value={password}
@@ -273,11 +214,10 @@ const handleLogin = async () => {
                   activeOpacity={0.7}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    {/* 💡 IONICONS Implementation */}
                     <Ionicons 
-                        name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                        size={24} 
-                        color="#b1ebd7" 
+                      name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                      size={24} 
+                      color="#b1ebd7" 
                     />
                 </TouchableOpacity>
               </View>
@@ -340,7 +280,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 2,
   },
-  // ❌ OLD INPUT STYLE IS NOW THE BASE
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.10)",
     width: 250,
@@ -356,26 +295,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 7,
   },
-  
-  // ✅ NEW STYLES FOR PASSWORD TOGGLE
   passwordInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     width: 250,
     marginBottom: 15,
-    position: 'relative', // Necessary for absolute positioning of the icon
+    position: 'relative', 
   },
   passwordInput: {
-    flex: 1, // Ensures input takes up necessary space
-    marginBottom: 0, // Remove margin from the input when wrapped
-    paddingRight: 50, // Space for the icon
+    flex: 1, 
+    marginBottom: 0, 
+    paddingRight: 50, 
   },
   toggleButton: {
     position: 'absolute',
     right: 15,
     padding: 5,
   },
-  
   button1: {
     backgroundColor: "#18B949",
     paddingVertical: 12,

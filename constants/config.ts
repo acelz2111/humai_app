@@ -1,14 +1,21 @@
-// constants/Config.ts
-
-// 1. CHANGE THIS IP to your computer's current IP
+// Assuming your existing structure. Adjust IP_ADDRESS as necessary.
 const IP_ADDRESS = "172.16.54.179"; 
+const BASE_URL = `http://${IP_ADDRESS}/HumAI`;
 
-// 2. Base URL
-const BASE_URL = `http://${IP_ADDRESS}/humai`;
-
-// 3. Export specific endpoints
 export const API = {
-    LOGIN: `${BASE_URL}/api/login.php`,
-    SIGNUP: `${BASE_URL}/api/signup.php`,
-    // Add other endpoints here later
+    LOGIN: `${BASE_URL}/backend/login.php`,
+    SIGNUP: `${BASE_URL}/backend/signup.php`,
+    GET_DISEASE: `${BASE_URL}/backend/get_disease.php`,
+    GET_DIAGNOSIS_COUNT: `${BASE_URL}/backend/get_diagnosis_count.php`,
+    // ✅ NEW ENDPOINT for recent diagnosis
+    GET_RECENT_DIAGNOSIS: `${BASE_URL}/backend/get_recent_diagnosis.php`, 
+};
+
+export const COLORS = {
+    PRIMARY_GREEN: '#18B949',
+    DARK_GREEN: '#1D492D',
+    WHITE: '#FFFFFF',
+    LIGHT_TEXT: '#b1ebd7',
+    CARD_BG: "#F6FFF7",
+    MODERN_BORDER: "#E5E5E5",
 };

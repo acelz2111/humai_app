@@ -1,52 +1,51 @@
 <?php
 // C:\xampp\htdocs\HumAI\backend\login.php
 
-// 1. SUPPRESS HTML ERRORS (Stops the "JSON Error: <" issue)
-error_reporting(E_ALL);
-ini_set('display_errors', 0); 
-
-// 2. SET HEADERS (Allows app access)
+// 1. SET HEADERS
+ob_clean();
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// 2. ENABLE ERROR DISPLAY (Temporarily, so we can see the crash in the App Log)
+error_reporting(E_ALL);
+ini_set('display_errors', 1); 
 
-// 3. DATABASE CONNECTION (Self-Contained - Eliminates file path errors)
+// 3. DB CONNECTION
 $servername = "localhost";
 $username = "root";
-// 🚨 CHECK THIS: Use "" if XAMPP default, or your actual MySQL root password.
-$password = "root123";          
+$password = "root123"; // You confirmed this works
 $dbname = "humai_db";    
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-
-// 4. CHECK CONNECTION AND EXIT WITH JSON ERROR
 if ($conn->connect_error) {
-    // This sends a clear JSON error to the app instead of crashing
-    echo json_encode(["success" => false, "message" => "DB Connection Failed: Check password or XAMPP."]);
+    echo json_encode(["success" => false, "message" => "DB Connection Failed: " . $conn->connect_error]);
     exit();
 }
 
-// 5. GET INPUT (Login Logic)
+// 4. GET INPUT
 $data = json_decode(file_get_contents("php://input"));
-
-if (!isset($data->email) || !isset($data->password)) {
-    echo json_encode(["success" => false, "message" => "Missing email or password"]);
+if ($data === null) {
+    echo json_encode(["success" => false, "message" => "Invalid JSON input"]);
     exit();
 }
+
 $email = $data->email;
-$password = $data->password;
+$pass  = $data->password;
 
-$stmt = $conn->prepare("SELECT * FROM users WHERE email=? AND password=?");
+// 5. QUERY DEBUGGING (The Critical Fix)
+$sql = "SELECT * FROM user WHERE email=? AND password=?";
+$stmt = $conn->prepare($sql);
+
+// CHECK IF PREPARE FAILED (This catches the "Table not found" crash)
 if (!$stmt) {
-    echo json_encode(["success" => false, "message" => "SQL Prepare Failed: " . $conn->error]);
+    echo json_encode([
+        "success" => false, 
+        "message" => "SQL Error: " . $conn->error 
+    ]);
     exit();
 }
-$stmt->bind_param("ss", $email, $password);
+
+$stmt->bind_param("ss", $email, $pass);
 $stmt->execute();
 $result = $stmt->get_result();
 

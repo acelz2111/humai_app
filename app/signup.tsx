@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons'; // Ionicons imported correctly
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -17,9 +18,11 @@ import {
   View
 } from "react-native";
 
+
 const { width } = Dimensions.get('window');
 
-const SERVER_URL = "http://172.16.54.179/HumAI/backend/signup.php";
+// 🚨 VERIFY THIS IP: Ensure this IP address is correct for your local network/PC.
+const SERVER_URL = "http://192.168.137.1/HumAI/backend/signup.php";
 
 export default function Signup() {
   const router = useRouter();
@@ -115,11 +118,26 @@ export default function Signup() {
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
+      // Check if response body is empty before attempting to parse JSON
+      const text = await response.text();
+      let result;
 
-      const result = await response.json();
+      try {
+          result = JSON.parse(text);
+      } catch (jsonError) {
+          console.error("JSON Parse Error. Server Response:", text);
+          if (text.includes("Database connection error")) {
+             // This happens if db.php printed the error directly without JSON
+             showToast("Database connection error (Check XAMPP MySQL).", "error");
+             setLoading(false);
+             return;
+          }
+          throw new Error("Invalid response from server.");
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} - ${result.message || 'Unknown'}`);
+      }
 
       if (result.success) {
         showToast("Account created successfully!", "success");
@@ -136,12 +154,12 @@ export default function Signup() {
       
       if (err.name === 'AbortError') {
         showToast("Request timeout. Please check your connection.", "error");
-      } else if (err.message.includes('Network')) {
-        showToast("No internet connection", "error");
+      } else if (err.message.includes('Network') || err.message.includes('Failed to fetch')) {
+        showToast("Cannot connect to server (Check IP, XAMPP Apache).", "error");
       } else if (err.message.includes('Server error')) {
         showToast("Server error. Please try again later.", "error");
       } else {
-        showToast("Cannot connect to server", "error");
+        showToast("An unexpected error occurred.", "error");
       }
     } finally {
       setLoading(false);
@@ -255,7 +273,12 @@ export default function Signup() {
                   onPress={() => setShowPassword(!showPassword)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                  {/* ✅ CORRECTED ICON LOGIC */}
+                  <Ionicons 
+                    name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                    size={24} 
+                    color="#b1ebd7" 
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -278,7 +301,12 @@ export default function Signup() {
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.eyeIcon}>{showConfirmPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                  {/* ✅ CORRECTED ICON LOGIC */}
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
+                    size={24} 
+                    color="#b1ebd7" 
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -393,9 +421,6 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 10,
     paddingRight: 15,
-  },
-  eyeIcon: {
-    fontSize: 20,
   },
   button1: {
     backgroundColor: "#18B949",
