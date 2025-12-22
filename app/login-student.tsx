@@ -23,7 +23,7 @@ import {
 } from "react-native-gesture-handler";
 
 // Assume the correct path to the backend
-const SERVER_URL = "http://172.16.54.179/HumAI/backend/login.php";
+const SERVER_URL = "http://192.168.101.8/HumAI/backend/login.php";
 
 const { width } = Dimensions.get("window");
 

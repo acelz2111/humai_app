@@ -1,263 +1,150 @@
-import React, { useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+
+const SUBMIT_URL = "http://192.168.101.8/HumAI/backend/submit_feedback.php";
 
 export default function Feedback() {
   const router = useRouter();
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [text, setText] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const [comments, setComments] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = () => {
-    const payload = text.trim();
-    if (!payload) {
-      inputRef.current?.focus();
+  const handleSubmit = async () => {
+    if (!comments.trim()) {
+      Alert.alert("Empty", "Please type something before submitting.");
       return;
     }
-    Keyboard.dismiss();
-    // TODO: send `payload` to your backend here
-    setSubmitted(true);
-  };
 
-  const onLogout = () => {
-    setMenuVisible(false);
-    router.replace("/login-type");
+    setLoading(true);
+    try {
+      const userId = await AsyncStorage.getItem('user_id');
+      if (!userId) {
+        router.replace("/login-student");
+        return;
+      }
+
+      const response = await fetch(SUBMIT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          comments: comments.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        Alert.alert("Success", result.message, [
+          { text: "OK", onPress: () => router.back() }
+        ]);
+      } else {
+        Alert.alert("Error", result.message);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not connect to server.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <LinearGradient
-      colors={["#18B949", "#1D492D"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.bg}
-    >
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
+    <LinearGradient colors={["#18B949", "#1D492D"]} style={styles.bg}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.header}>Feedback</Text>
+            <View style={{ width: 24 }} />
+          </View>
 
-        <Text style={styles.title}>Feedback</Text>
-
-        <TouchableOpacity onPress={() => setMenuVisible((v) => !v)} activeOpacity={0.7}>
-          <Feather name="menu" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Body */}
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", android: undefined })}
-        style={{ flex: 1 }}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.content}>
-    <View style={styles.body}>
-        <Image
-          source={require("../assets/images/HumAI_logo.png")} 
-          style={styles.logo}
-          resizeMode="cover"
-        />
-            </View>
+            <Text style={styles.label}>How can we improve HumAI?</Text>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Type your suggestions or report issues here..."
+              placeholderTextColor="#b1ebd7"
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              value={comments}
+              onChangeText={setComments}
+            />
 
-            <Text style={styles.heading}>
-              {submitted ? "Thank you for sharing your thoughts with us." : "Share your thoughts with us."}
-            </Text>
-
-            {submitted ? (
-              <View style={styles.submittedWrap}>
-                <View style={styles.submitBtnDisabled}>
-                  <Text style={styles.submitBtnDisabledText}>Feedback Submitted</Text>
-                </View>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  ref={inputRef}
-                  placeholder="Enter feedback here"
-                  placeholderTextColor="#CDE9D4"
-                  value={text}
-                  onChangeText={setText}
-                  multiline
-                  numberOfLines={5}
-                  style={styles.input}
-                  textAlignVertical="top"
-                  returnKeyType="done"
-                  onSubmitEditing={onSubmit}
-                />
-                <TouchableOpacity onPress={onSubmit} activeOpacity={0.9} style={styles.submitBtn}>
-                  <Text style={styles.submitBtnText}>Submit Feedback</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <TouchableOpacity
+              style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#143B28" />
+              ) : (
+                <Text style={styles.submitText}>Submit Feedback</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-
-      {/* ✅ Menu Overlay + Dropdown (moved OUTSIDE topBar) */}
-      {menuVisible && (
-        <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdown}>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push("/dashboard");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Dashboard</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push("/profile");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Profile</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.dropdownItem} onPress={onLogout}>
-                  <Text style={styles.dropdownText}>Logout</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
+        </View>
+      </TouchableWithoutFeedback>
     </LinearGradient>
   );
 }
 
-const DARK = "#143B28";
-
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-
-  /* Top bar */
+  container: { flex: 1, paddingHorizontal: 20 },
   topBar: {
-    paddingTop: 56,
-    paddingHorizontal: 18,
+    paddingTop: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    zIndex: 5, // stays above gradient
+    marginBottom: 30,
   },
-  title: { color: "#fff", fontSize: 18, fontWeight: "700" },
-
-  /* Menu */
-  menuOverlay: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 2000,
-  },
-  dropdown: {
-    position: "absolute",
-    top: 56 + 8, // below the top bar
-    right: 18,
-    backgroundColor: "#FFFFFF",
-    width: 160,
-    borderRadius: 12,
-    paddingVertical: 6,
-    // shadows
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-    elevation: 16,
-    zIndex: 2100,
-  },
-  dropdownItem: { paddingHorizontal: 16, paddingVertical: 12 },
-  dropdownText: { color: DARK, fontSize: 16, fontWeight: "700" },
-
-  /* Body */
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 28,
-  },
-
-  body: {
-    alignSelf: "center",
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#1E6C40",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 80,
-    resizeMode: "contain",
-  },
-
-  heading: {
+  header: { color: "#fff", fontSize: 22, fontWeight: "bold" },
+  content: { flex: 1, alignItems: "center" },
+  label: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontWeight: "600",
+    marginBottom: 20,
     alignSelf: "flex-start",
   },
-
-  input: {
-    backgroundColor: "#4AA86A55",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 120,
+  textArea: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    width: "100%",
+    borderRadius: 15,
+    padding: 15,
     color: "#fff",
-    borderWidth: 1,
-    borderColor: "#9AD5AE55",
-    marginBottom: 14,
     fontSize: 16,
-  },
-
-  submitBtn: {
-    alignSelf: "center",
-    backgroundColor: "#E8F5EC",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  submitBtnText: { color: DARK, fontWeight: "800", fontSize: 16 },
-
-  submittedWrap: { alignItems: "center", marginTop: 12 },
-  submitBtnDisabled: {
-    backgroundColor: "#4AA86A55",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
     borderWidth: 1,
-    borderColor: "#9AD5AE66",
+    borderColor: "#18B949",
+    minHeight: 150,
   },
-  submitBtnDisabledText: { color: "#E8F5EC", fontWeight: "800", fontSize: 16 },
+  submitBtn: {
+    backgroundColor: "#fff",
+    marginTop: 30,
+    width: "100%",
+    padding: 15,
+    borderRadius: 30,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  submitText: { color: "#143B28", fontWeight: "bold", fontSize: 18 },
 });

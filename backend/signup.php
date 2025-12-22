@@ -1,43 +1,47 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Content-Type: application/json; charset=UTF-8");
-
-require 'db.php';
+// backend/signup.php
+require_once 'db.php';
 
 $input = file_get_contents("php://input");
 $data = json_decode($input);
 
-if (!$data || !isset($data->name) || !isset($data->email) || !isset($data->password)) {
-    echo json_encode(["success" => false, "message" => "Invalid input"]);
+if (!$data) {
+    echo json_encode(["success" => false, "message" => "No data received"]);
     exit();
 }
 
-// Split name for your first_name/last_name columns
-$parts = explode(" ", trim($data->name), 2);
-$first_name = $parts[0];
-$last_name = isset($parts[1]) ? $parts[1] : '';
-$email = trim($data->email);
-$password = password_hash($data->password, PASSWORD_DEFAULT);
+try {
+    $first_name = trim($data->first_name);
+    $last_name = trim($data->last_name);
+    $email = trim($data->email);
+    $phone_number = trim($data->phone_number);
+    $password = password_hash($data->password, PASSWORD_DEFAULT);
 
-// INSERT using your actual column names: first_name, last_name, type_id, registered_date
-$sql = "INSERT INTO user (first_name, last_name, email, password, type_id, registered_date) VALUES (?, ?, ?, ?, 2, NOW())";
-$stmt = $conn->prepare($sql);
+    // 1. Local Validation for the 10-digit Trigger in your DB
+    if (!preg_match('/^[0-9]{10}$/', $phone_number)) {
+        echo json_encode(["success" => false, "message" => "Phone number must be exactly 10 digits."]);
+        exit();
+    }
 
-if (!$stmt) {
-    echo json_encode(["success" => false, "message" => "SQL Error: " . $conn->error]);
-    exit();
+    // 2. Start Transaction
+    $conn->begin_transaction();
+
+    $sql = "INSERT INTO user (first_name, last_name, email, phone_number, password, type_id, registered_date) 
+            VALUES (?, ?, ?, ?, ?, 2, NOW())";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssss", $first_name, $last_name, $email, $phone_number, $password);
+    
+    if ($stmt->execute()) {
+        // --- CRITICAL: You must commit or the data is lost! ---
+        $conn->commit(); 
+        echo json_encode(["success" => true, "message" => "Signup successful!"]);
+    } else {
+        throw new Exception("Execution failed.");
+    }
+
+} catch (Exception $e) {
+    $conn->rollback(); // Undo if error occurs
+    echo json_encode(["success" => false, "message" => "Database Error: " . $e->getMessage()]);
 }
-
-$stmt->bind_param("ssss", $first_name, $last_name, $email, $password);
-
-if ($stmt->execute()) {
-    echo json_encode(["success" => true, "message" => "Signup successful!"]);
-} else {
-    echo json_encode(["success" => false, "message" => "Registration failed: " . $stmt->error]);
-}
-
-$stmt->close();
-$conn->close();
 ?>

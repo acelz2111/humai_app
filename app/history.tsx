@@ -1,105 +1,122 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   FlatList,
   Image,
   Modal,
   PanResponder,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View
 } from "react-native";
-import { Calendar } from "react-native-calendars";
+import { API } from "../constants/Config";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+const DARK = "#143B28";
+const CARD_BG = "#F6FFF7";
 
-// --- Helper: format date to 'YYYY-MM-DD'
-const formatDate = (date) => {
-  if (typeof date === "string") return date;
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
+const diseaseImages: { [key: string]: any } = {
+  "Rice Blast": require("../assets/images/Rice_Blastt.png"),
+  "Leaf Blast": require("../assets/images/Rice_Blastt.png"),
+  "Sheath Blight": require("../assets/images/Sheath_Blightt.png"),
+  "Bacterial Leaf Blight": require("../assets/images/Bacterial_Blightt.png"),
+  "Bacterial Blight": require("../assets/images/Bacterial_Blightt.png"),
+  "Tungro Virus": require("../assets/images/tungro.png"),
+  "Brown Spot": require("../assets/images/brown_spot.png"),
+  "Placeholder": require("../assets/images/bacterial_blight.png"),
 };
 
-type Item = {
-  id: string;
-  title: string;
-  fileLabel: string;
-  date: string;
-  time: string;
-  description: string;
-  symptoms: string;
-  causes: string;
-  image: any;
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// Generate years dynamically (e.g., from 2020 to current year + 1)
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => (CURRENT_YEAR - 4 + i));
+
+const getDaysInMonth = (monthIndex: number, year: number) => {
+    return new Date(year, monthIndex + 1, 0).getDate();
+};
+
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return { date: "N/A", time: "" };
+  // Ensure date string is compatible with JS Date
+  const isoString = dateString.replace(" ", "T"); 
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return { date: dateString, time: "" };
+  
+  const datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // ✅ Extract Time Correctly
+  const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return { date: datePart, time: timePart };
 };
 
 export default function History() {
   const router = useRouter();
-  const flatListRef = useRef(null);
-
-  const [activeTab, setActiveTab] = useState("history");
-  const activeColor = "#22BB66";
-  const inactiveColor = "#143B28";
-
   const [menuVisible, setMenuVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  
+  // Calendar State
+  const [currentYear, setCurrentYear] = useState(CURRENT_YEAR);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
-  // --- SMOOTH SWIPE animation state
+  // Dropdown Visibility for Calendar
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+
   const translateX = useRef(new Animated.Value(0)).current;
-
-  // Card animation for popup
   const cardScale = useRef(new Animated.Value(0.96)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
-  // --- Full historic data (add freely, new entries auto supported)
-  const data: Item[] = useMemo(
-    () => [
-      {
-        id: "1",
-        title: "Rice Blast",
-        fileLabel: "Image1.jpg",
-        date: "2025-06-23",
-        time: "2:59PM",
-        description:
-          "Rice Blast is one of the most destructive diseases of rice worldwide. It is caused by the fungus Magnaporthe oryzae.",
-        symptoms:
-          "Leaf spots: Diamond- or spindle-shaped lesions with gray centers and brown borders.",
-        causes: "Caused by the fungus Magnaporthe oryzae.",
-        image: require("../assets/images/rice_blast.png"),
-      },
-      {
-        id: "2",
-        title: "Sheath Blight",
-        fileLabel: "Image2.jpg",
-        date: "2025-06-24",
-        time: "2:45PM",
-        description:
-          "Sheath blight affects the sheaths and leaves, leading to lodging and yield loss.",
-        symptoms:
-          "Elliptical lesions on leaf sheaths that may coalesce and spread upward.",
-        causes: "Caused by the fungus Rhizoctonia solani.",
-        image: require("../assets/images/sheath_blight.png"),
-      },
-    ],
-    []
-  );
+  useEffect(() => {
+    const init = async () => {
+      let userId = await AsyncStorage.getItem('user_id');
+      if (userId) fetchHistory(userId);
+      else router.replace("/login-student"); 
+    };
+    init();
+  }, []);
 
-  // --- Filtering: if date selected, only show matching
-  const filteredData =
-    selectedDate == null
-      ? data
-      : data.filter((item) => item.date === selectedDate);
+  const fetchHistory = async (userId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API.GET_HISTORY}?user_id=${userId}`);
+      const result = await response.json();
+      if (result.success) setHistoryData(result.data); 
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // --- Card popup animation function
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('user_id');
+    setMenuVisible(false);
+    router.replace("/login-student");
+  };
+
+  const filteredData = useMemo(() => {
+    if (!selectedDate) return historyData;
+    return historyData.filter((item: any) => {
+      // Use raw_date for precise filtering if available, else date_diagnosed
+      const rawDate = item.raw_date || item.date_diagnosed || "";
+      const { date } = formatDateTime(rawDate); 
+      return date === selectedDate; 
+    });
+  }, [selectedDate, historyData]);
+
   const popInCard = () => {
     cardScale.setValue(0.92);
     cardOpacity.setValue(0);
@@ -108,440 +125,279 @@ export default function History() {
       Animated.timing(cardOpacity, { toValue: 1, duration: 210, useNativeDriver: true }),
     ]).start();
   };
-  const showPopup = (item: Item) => {
+
+  const showPopup = (item: any) => {
     setSelectedItem(item);
     setTimeout(popInCard, 10);
   };
 
-  // --- PanResponder for right swipe gesture
+  const handleDayPress = (day: number) => {
+    const displayDate = new Date(currentYear, currentMonth, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    setSelectedDate(displayDate); 
+    setCalendarVisible(false);
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 7 && Math.abs(gesture.dy) < 18,
-      onPanResponderGrant: () => {},
-      onPanResponderMove: Animated.event(
-        [null, { dx: translateX }],
-        { useNativeDriver: false }
-      ),
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 20 && Math.abs(gesture.dy) < 30,
+      onPanResponderMove: Animated.event([null, { dx: translateX }], { useNativeDriver: false }),
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > width * 0.24) {
-          Animated.spring(translateX, {
-            toValue: width,
-            speed: 13,
-            bounciness: 7,
-            useNativeDriver: true
-          }).start(() => {
-            setActiveTab("dashboard");
-            translateX.setValue(0);
-            router.push("/dashboard");
-          });
+        if (gesture.dx > width * 0.3) {
+          Animated.spring(translateX, { toValue: width, useNativeDriver: true }).start(() => router.push("/dashboard"));
         } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            speed: 14,
-            bounciness: 10,
-            useNativeDriver: true
-          }).start();
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
         }
       }
     })
   ).current;
 
-  const renderItem = ({ item }: { item: Item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.84}
-      onPress={() => showPopup(item)}
-    >
-      <View style={styles.rowTopSimple}>
-        <Image source={item.image} style={styles.thumbLarge} />
-        <View style={{ flex: 1, justifyContent: "center", marginLeft: 16 }}>
-          <Text style={styles.titleModern}>{item.title}</Text>
-          <Text style={styles.dateModern}>{item.date}</Text>
-        </View>
-        <Ionicons name="chevron-forward" color="#BEE8D2" size={24} />
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item, index }: { item: any, index: number }) => {
+    // ✅ Use the raw_date from the backend to ensure time is included
+    const rawDate = item.raw_date || item.date_diagnosed || "";
+    const { date, time } = formatDateTime(rawDate);
 
-  // --- Modern calendar modal content
-  const CalendarModal = (
-    <Modal
-      transparent
-      visible={calendarVisible}
-      animationType="fade"
-      onRequestClose={() => setCalendarVisible(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setCalendarVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.calendarModernBox}>
-              <Calendar
-                onDayPress={day => {
-                  setCalendarVisible(false);
-                  setSelectedDate(day.dateString);
-                }}
-                markedDates={
-                  Object.fromEntries(
-                    data.map(i => [i.date, {
-                      marked: true,
-                      dotColor: "#22BB66",
-                      selected: selectedDate === i.date,
-                      selectedColor: selectedDate === i.date ? "#15c36d" : undefined
-                    }])
-                  )
-                }
-                theme={{
-                  backgroundColor: "#fff",
-                  calendarBackground: "#fff",
-                  textSectionTitleColor: "#30ad89",
-                  dayTextColor: "#143B28",
-                  monthTextColor: "#22BB66",
-                  textMonthFontWeight: "700",
-                  todayTextColor: "#1fde67",
-                  selectedDayTextColor: "#fff",
-                  selectedDayBackgroundColor: "#22BB66",
-                  arrowColor: "#22BB66",
-                  textDisabledColor: "#cacaca"
-                }}
-                style={{
-                  borderRadius: 28,
-                  padding: 6,
-                  margin: 10
-                }}
-                renderArrow={direction =>
-                  <Ionicons
-                    name={direction === "left" ? "chevron-back" : "chevron-forward"}
-                    size={26}
-                    color="#16ac5c"
-                  />
-                }
-                enableSwipeMonths
-              />
+    return (
+        <TouchableOpacity style={styles.card} activeOpacity={0.84} onPress={() => showPopup(item)}>
+        <View style={styles.rowTopSimple}>
+            <Image 
+            source={{ uri: `http://192.168.101.8/HumAI/backend/get_image.php?id=${item.id}` }} 
+            style={styles.thumbLarge} 
+            defaultSource={diseaseImages[item.disease_name] || diseaseImages["Placeholder"]}
+            />
+            <View style={{ flex: 1, justifyContent: "center", marginLeft: 16 }}>
+                <Text style={styles.titleModern}>{item.disease_name}</Text>
+                {/* ✅ Display Date and Time Separately */}
+                <Text style={styles.dateModern}>
+                    {date} • <Text style={{fontWeight: 'normal', color: '#666'}}>{time}</Text>
+                </Text>
+                <Text style={styles.confidenceText}>Confidence: {item.confidence}%</Text>
             </View>
-          </TouchableWithoutFeedback>
+            <Ionicons name="chevron-forward" color="#BEE8D2" size={24} />
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
+        </TouchableOpacity>
+    );
+  };
+
+  const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
-    <LinearGradient
-      colors={["#18B949", "#1D492D"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.bg}
-    >
-      {/* Top bar (no back sign) */}
+    <LinearGradient colors={["#18B949", "#1D492D"]} style={styles.bg}>
       <View style={styles.topBar}>
         <Text style={styles.header}>History</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <TouchableOpacity
-            onPress={() => setMenuVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Feather name="menu" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setCalendarVisible(true)}
-            activeOpacity={0.7}
-          >
+        <View style={styles.topIcons}>
+          <TouchableOpacity onPress={() => setCalendarVisible(true)}>
             <Ionicons name="calendar-outline" size={26} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)}>
+            <Feather name="menu" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Section Header */}
-      <View style={styles.sectionHeaderWrap}>
-        <Text style={styles.sectionHeader}>Recent</Text>
+      <View style={styles.filterInfo}>
+        <Text style={styles.sectionHeader}>{selectedDate ? `Records: ${selectedDate}` : "My Records"}</Text>
+        {selectedDate && <TouchableOpacity onPress={() => setSelectedDate(null)}><Text style={styles.clearText}>Clear Filter</Text></TouchableOpacity>}
       </View>
 
-      {/* Animated FlatList for left-right swipe */}
-      <Animated.View
-        style={{
-          flex: 1,
-          transform: [{ translateX: translateX }],
-        }}
-        {...panResponder.panHandlers}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={filteredData}
-          keyExtractor={(it) => it.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="alert-circle-outline" size={42} color="#afdcae" />
-              <Text style={styles.emptyText}>No history on this day</Text>
-            </View>
-          }
-        />
-      </Animated.View>
+      {loading ? (
+        <ActivityIndicator size="large" color="#fff" style={{ flex: 1 }} />
+      ) : (
+        <Animated.View style={{ flex: 1, transform: [{ translateX }] }} {...panResponder.panHandlers}>
+          <FlatList
+            data={filteredData}
+            keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : index.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Ionicons name="alert-circle-outline" size={42} color="#afdcae" />
+                <Text style={styles.emptyText}>No history records found.</Text>
+              </View>
+            }
+          />
+        </Animated.View>
+      )}
 
-      {CalendarModal}
-
-      {/* Menu Dropdown */}
+      {/* --- MENU MODAL --- */}
       {menuVisible && (
         <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
           <View style={styles.menuOverlay}>
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/dashboard"); }}>
+                <Text style={styles.dropdownText}>Dashboard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/profile"); }}>
+                <Text style={styles.dropdownText}>Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/feedback"); }}>
+                <Text style={styles.dropdownText}>Submit Feedback</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
+                <Text style={[styles.dropdownText, { color: '#FF4444' }]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
+
+      {/* --- CALENDAR MODAL --- */}
+      <Modal transparent visible={calendarVisible} animationType="fade">
+        <TouchableWithoutFeedback onPress={() => { setCalendarVisible(false); setShowMonthPicker(false); setShowYearPicker(false); }}>
+          <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={styles.dropdownMenu}>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    setActiveTab("dashboard");
-                    router.push("/dashboard");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Dashboard</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push("/profile");
-                  }}>
-                  <Text style={styles.dropdownText}>Profile</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.replace("/login-type");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Logout</Text>
+              <View style={styles.calendarContainer}>
+                
+                {/* 🔽 CALENDAR HEADER WITH DROPDOWNS */}
+                <View style={styles.calHeader}>
+                   
+                   {/* Month Selector */}
+                   <TouchableOpacity style={styles.dropdownBtn} onPress={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}>
+                      <Text style={styles.dropdownBtnText}>{MONTHS[currentMonth]}</Text>
+                      <Ionicons name="caret-down" size={12} color={DARK} />
+                   </TouchableOpacity>
+
+                   {/* Year Selector */}
+                   <TouchableOpacity style={styles.dropdownBtn} onPress={() => { setShowYearPicker(!showYearPicker); setShowMonthPicker(false); }}>
+                      <Text style={styles.dropdownBtnText}>{currentYear}</Text>
+                      <Ionicons name="caret-down" size={12} color={DARK} />
+                   </TouchableOpacity>
+
+                </View>
+
+                {/* 🔽 DROPDOWN LISTS (Overlaying the grid) */}
+                {showMonthPicker && (
+                    <View style={styles.pickerOverlay}>
+                        <ScrollView style={{maxHeight: 200}}>
+                            {MONTHS.map((m, index) => (
+                                <TouchableOpacity key={m} style={styles.pickerItem} onPress={() => { setCurrentMonth(index); setShowMonthPicker(false); }}>
+                                    <Text style={[styles.pickerItemText, currentMonth === index && {color: '#22BB66', fontWeight:'bold'}]}>{m}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+
+                {showYearPicker && (
+                    <View style={styles.pickerOverlay}>
+                        <ScrollView style={{maxHeight: 200}}>
+                            {YEARS.map((y) => (
+                                <TouchableOpacity key={y} style={styles.pickerItem} onPress={() => { setCurrentYear(y); setShowYearPicker(false); }}>
+                                    <Text style={[styles.pickerItemText, currentYear === y && {color: '#22BB66', fontWeight:'bold'}]}>{y}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+
+                {/* Days Grid */}
+                <View style={styles.daysGrid}>
+                  {daysArray.map(day => (
+                    <TouchableOpacity 
+                        key={day} 
+                        style={styles.dayCell} 
+                        onPress={() => handleDayPress(day)}
+                    >
+                      <Text style={styles.dayText}>{day}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity onPress={() => setCalendarVisible(false)} style={styles.calCloseBtn}>
+                  <Text style={{color: '#fff', fontWeight: 'bold'}}>Close</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      )}
+      </Modal>
 
-      {/* Popup for item details (with animation) */}
-      <Modal
-        transparent
-        visible={!!selectedItem}
-        animationType="fade"
-        onRequestClose={() => setSelectedItem(null)}
-      >
+      {/* --- ITEM DETAIL MODAL --- */}
+      <Modal transparent visible={!!selectedItem} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setSelectedItem(null)}>
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <Animated.View
-                style={[
-                  styles.popupContainer,
-                  {
-                    opacity: cardOpacity,
-                    transform: [{ scale: cardScale }]
-                  },
-                ]}
-              >
-                {selectedItem && (
-                  <>
-                    <Image source={selectedItem.image} style={styles.popupImage} />
-                    <Text style={styles.popupTitle}>{selectedItem.title}</Text>
-                    <Text style={styles.popupDate}>
-                      {selectedItem.date} {selectedItem.time}
-                    </Text>
-                    <View style={styles.popupDivider} />
+            <Animated.View style={[styles.popupContainer, { opacity: cardOpacity, transform: [{ scale: cardScale }] }]}>
+              {selectedItem && (
+                <>
+                  <TouchableOpacity onPress={() => setSelectedItem(null)} style={styles.closePopupBtn}><Ionicons name="close" size={22} color="#18543A" /></TouchableOpacity>
+                  <Image source={{ uri: `http://192.168.101.8/HumAI/backend/get_image.php?id=${selectedItem.id}` }} style={styles.popupImage} defaultSource={diseaseImages[selectedItem.disease_name]} />
+                  <Text style={styles.popupTitle}>{selectedItem.disease_name}</Text>
+                  {/* ✅ Popup Date & Time */}
+                  <Text style={styles.popupDate}>
+                      {formatDateTime(selectedItem.raw_date || selectedItem.date_diagnosed).date} • {formatDateTime(selectedItem.raw_date || selectedItem.date_diagnosed).time}
+                  </Text>
+                  <View style={styles.popupDivider} />
+                  <ScrollView style={{width: '100%', maxHeight: 250}}>
                     <Text style={styles.popupLabel}>Description</Text>
-                    <Text style={styles.popupText}>{selectedItem.description}</Text>
-                    <Text style={styles.popupLabel}>Symptoms</Text>
-                    <Text style={styles.popupText}>{selectedItem.symptoms}</Text>
-                    <Text style={styles.popupLabel}>Causes</Text>
-                    <Text style={styles.popupText}>{selectedItem.causes}</Text>
-                    <View style={{ height: 1, opacity: 0.15, backgroundColor: "#143B28", marginVertical: 10 }} />
-                    <Text style={styles.popupFile}>{selectedItem.fileLabel}</Text>
-                    <TouchableOpacity onPress={() => setSelectedItem(null)} style={styles.closePopupBtn}>
-                      <Ionicons name="close" size={22} color="#18543A" />
-                    </TouchableOpacity>
-                  </>
-                )}
-              </Animated.View>
-            </TouchableWithoutFeedback>
+                    <Text style={styles.popupText}>{selectedItem.description || "N/A"}</Text>
+                    <Text style={styles.popupLabel}>Care Guide</Text>
+                    <Text style={styles.popupText}>Treatment: {selectedItem.treatment || "N/A"}{"\n\n"}Prevention: {selectedItem.prevention || "N/A"}</Text>
+                  </ScrollView>
+                </>
+              )}
+            </Animated.View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Tab Bar - Same size as Dashboard, no green on Dashboard icon */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => {
-            setActiveTab("chatbot");
-            router.push("/chatbot");
-          }}>
-          <Ionicons
-            name={activeTab === "chatbot" ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
-            size={22}
-            color={activeTab === "chatbot" ? activeColor : inactiveColor}
-          />
-          <Text style={[styles.tabLabel, activeTab === "chatbot" && { color: activeColor }]}>
-            Chatbot
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => {
-            setActiveTab("dashboard");
-            router.push("/dashboard");
-          }}>
-          <Ionicons
-            name={"grid-outline"}
-            size={22}
-            color={inactiveColor}
-          />
-          <Text style={styles.tabLabel}>Dashboard</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => {
-            setActiveTab("history");
-            router.push("/history");
-          }}>
-          <Ionicons
-            name={activeTab === "history" ? "time" : "time-outline"}
-            size={22}
-            color={activeTab === "history" ? activeColor : inactiveColor}
-          />
-          <Text style={[styles.tabLabel, activeTab === "history" && { color: activeColor }]}>
-            History
-          </Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.push("/chatbot")}><Ionicons name="chatbubble-ellipses-outline" size={22} color={DARK} /><Text style={styles.tabLabel}>Chatbot</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.push("/dashboard")}><Ionicons name="grid-outline" size={22} color={DARK} /><Text style={styles.tabLabel}>Dashboard</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.push("/history")}><Ionicons name="time" size={22} color="#22BB66" /><Text style={[styles.tabLabel, { color: "#22BB66" }]}>History</Text></TouchableOpacity>
       </View>
     </LinearGradient>
   );
 }
 
-const CARD_BG = "#F6FFF7";
-const DARK = "#143B28";
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  topBar: {
-    paddingTop: 56,
-    paddingBottom: 8,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    zIndex: 5,
-  },
-  header: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  sectionHeaderWrap: {
-    marginTop: 5, 
-    marginBottom: 5, 
-    paddingHorizontal: 20,
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffffff",
-    letterSpacing: 0.02,
-  },
-  listContent: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 80, gap: 20 },
-  card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    padding: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 7,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 7,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#e4e4e7"
-  },
-  rowTopSimple: { flexDirection: "row", alignItems: "center", width: "100%" },
-  thumbLarge: { width: 64, height: 64, borderRadius: 15, backgroundColor: "#fff" },
-  titleModern: { fontSize: 18, fontWeight: "bold", color: DARK, letterSpacing: 0.1 },
-  dateModern: { color: "#229a4d", fontWeight: "700", fontSize: 13, marginTop: 7 },
-  // -- Popup Styling --
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.24)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  popupContainer: {
-    width: width * 0.89,
-    maxWidth: 420,
-    borderRadius: 26,
-    backgroundColor: "#fff",
-    padding: 26,
-    alignItems: "center",
-    shadowColor: "#1EBA56",
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 14,
-    position: "relative"
-  },
-  popupImage: { width: 126, height: 126, borderRadius: 16, marginBottom: 14, backgroundColor: "#ecfaf3" },
-  popupTitle: { fontSize: 23, fontWeight: "bold", color: DARK, textAlign: "center", marginBottom: 2, marginTop: 4 },
-  popupDate: { color: "#229a4d", fontWeight: "600", fontSize: 13, marginBottom: 6 },
-  popupDivider: { width: 70, height: 3, borderRadius: 2, backgroundColor: "#d7f3e4", marginVertical: 10 },
-  popupLabel: { color: "#129b4b", fontWeight: "800", fontSize: 13, marginTop: 7, marginBottom: 2, alignSelf: "flex-start" },
-  popupText: { color: "#246A46", fontSize: 14.5, lineHeight: 22, marginBottom: 5, alignSelf: "flex-start" },
-  popupFile: { color: "#999", fontSize: 12, alignSelf: "flex-end", marginTop: 9, marginBottom: -7 },
-  closePopupBtn: {
-    position: "absolute",
-    top: 13, right: 17,
-    zIndex: 2, backgroundColor: "#ebede7", borderRadius: 24,
-    width: 37, height: 37, alignItems: "center", justifyContent: "center"
-  },
-  empty: { justifyContent: "center", alignItems: "center", marginTop: 44, marginBottom: 30 },
-  emptyText: { color: "#adcaba", fontSize: 17, fontWeight: "700", marginTop: 12, opacity: 0.8 },
-  // ---- Modern calendar modal ----
-  calendarModernBox: {
-    width: 345,
-    backgroundColor: "#fff",
-    borderRadius: 28,
-    padding: 4, alignItems: "center",
-    shadowColor: "#1EBA56",
-    shadowOpacity: 0.13,
-    shadowRadius: 14,
-    elevation: 10,
-    marginTop: 50,
-  },
-  // ---- Menu and Calendar ----
-  menuOverlay: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 2000,
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 64,
-    right: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 6,
-    width: 170,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-    elevation: 16,
-    zIndex: 2100,
-  },
-  dropdownItem: { paddingHorizontal: 16, paddingVertical: 12 },
+  topBar: { paddingTop: 60, paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  header: { color: "#fff", fontSize: 24, fontWeight: "bold" },
+  topIcons: { flexDirection: "row", gap: 15 },
+  filterInfo: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 20, alignItems: 'center' },
+  sectionHeader: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  clearText: { color: "#b1ebd7", fontWeight: "bold", textDecorationLine: 'underline', fontSize: 14 },
+  listContent: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 100 },
+  card: { backgroundColor: CARD_BG, borderRadius: 18, padding: 12, marginBottom: 12, elevation: 3 },
+  rowTopSimple: { flexDirection: "row", alignItems: "center" },
+  thumbLarge: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#eee' },
+  titleModern: { fontSize: 18, fontWeight: "bold", color: DARK },
+  dateModern: { color: "#229a4d", fontSize: 13, marginTop: 4, fontWeight: "500" },
+  confidenceText: { fontSize: 11, color: "#666", marginTop: 2 },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 100 },
+  emptyText: { color: "#fff", fontSize: 16, marginTop: 10, textAlign: 'center', opacity: 0.8 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  popupContainer: { width: width * 0.9, backgroundColor: "#fff", borderRadius: 24, padding: 24, alignItems: "center" },
+  popupImage: { width: 150, height: 150, borderRadius: 20, marginBottom: 15, backgroundColor: '#eee' },
+  popupTitle: { fontSize: 22, fontWeight: "bold", color: DARK },
+  popupDate: { color: "#229a4d", fontSize: 13, marginTop: 5, marginBottom: 10 },
+  popupDivider: { width: 50, height: 4, borderRadius: 2, backgroundColor: "#d7f3e4", marginVertical: 15 },
+  popupLabel: { fontWeight: "bold", color: "#129b4b", fontSize: 14, alignSelf: "flex-start", marginTop: 10 },
+  popupText: { color: DARK, fontSize: 14, lineHeight: 20 },
+  closePopupBtn: { position: "absolute", top: 15, right: 15, backgroundColor: "#f0f0f0", borderRadius: 20, padding: 5 },
+  tabBar: { position: "absolute", bottom: 0, width: '100%', backgroundColor: CARD_BG, flexDirection: "row", paddingVertical: 15, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  tabItem: { flex: 1, alignItems: "center" },
+  tabLabel: { fontSize: 11, fontWeight: "bold", marginTop: 4 },
+  
+  // Menu Styles
+  menuOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000 },
+  dropdownMenu: { position: "absolute", top: 70, right: 18, backgroundColor: "#FFFFFF", borderRadius: 16, paddingVertical: 8, width: 180, elevation: 8 },
+  dropdownItem: { paddingHorizontal: 20, paddingVertical: 12 },
   dropdownText: { fontSize: 16, color: DARK, fontWeight: "700" },
-  // ---- Tab bar styles (same size as Dashboard) ----
-  tabBar: {
-    position: "absolute",
-    left: 0, right: 0, bottom: 0,
-    backgroundColor: CARD_BG,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopLeftRadius: 18, borderTopRightRadius: 18,
-    paddingBottom: 20, paddingTop: 21, paddingHorizontal: 24,
-    shadowColor: "#000", shadowOpacity: 0.09, shadowRadius: 8, elevation: 6,
-  },
-  tabItem: { alignItems: "center", gap: 4, flex: 1, justifyContent: "center" },
-  tabLabel: { color: DARK, fontSize: 12, fontWeight: "700", marginTop: 2 },
+
+  // Calendar Styles
+  calendarContainer: { width: 320, backgroundColor: "#fff", borderRadius: 18, padding: 15, alignItems: "center" },
+  calHeader: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginBottom: 15, alignItems: 'center' },
+  calTitle: { fontSize: 18, fontWeight: "bold", color: DARK },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
+  dayCell: { width: 40, height: 40, justifyContent: "center", alignItems: "center", margin: 1 },
+  dayText: { fontSize: 16, color: "#333" },
+  calCloseBtn: { marginTop: 15, backgroundColor: "#22BB66", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 10 },
+  
+  // New Dropdown Styles
+  dropdownBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F5F2', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, gap: 5 },
+  dropdownBtnText: { fontSize: 16, fontWeight: 'bold', color: DARK },
+  pickerOverlay: { position: 'absolute', top: 60, zIndex: 100, backgroundColor: '#fff', width: '80%', borderRadius: 10, elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, padding: 5 },
+  pickerItem: { paddingVertical: 10, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  pickerItemText: { fontSize: 16, color: DARK }
 });

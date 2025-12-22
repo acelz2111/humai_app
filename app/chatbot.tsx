@@ -1,213 +1,136 @@
-import React, { useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
-  Keyboard,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { Ionicons, Feather } from "@expo/vector-icons";
+} from 'react-native';
+import { API } from '../constants/Config';
+
+interface Message {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot';
+}
 
 export default function Chatbot() {
   const router = useRouter();
-  const [message, setMessage] = useState("");
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', text: "Hello! I am HumAI. Ask me about rice diseases, treatments, or prevention tips.", sender: 'bot' },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
-  const send = () => {
-    if (!message.trim()) return;
-    // TODO: hook to your chatbot backend
-    setMessage("");
-    Keyboard.dismiss();
+  // Auto-scroll to bottom whenever messages change
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
-  const handleLogout = () => {
-    setMenuVisible(false);
-    router.replace("/login-type");
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+
+  const handleSend = async () => {
+    if (inputText.trim() === '') return;
+
+    const userMsg: Message = { id: Date.now().toString(), text: inputText, sender: 'user' };
+    setMessages(prev => [...prev, userMsg]);
+    const userQuery = inputText;
+    setInputText('');
+    setIsTyping(true);
+
+    try {
+      const response = await fetch(`${API.BASE_URL}/backend/chatbot_handler.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userQuery }),
+      });
+
+      const result = await response.json();
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        text: result.reply,
+        sender: 'bot',
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } catch (error) {
+      setMessages(prev => [...prev, { id: 'err', text: "Connection error. Please check your XAMPP server.", sender: 'bot' }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
+
+  const renderItem = ({ item }: { item: Message }) => (
+    <View style={[styles.msgBubble, item.sender === 'user' ? styles.userBubble : styles.botBubble]}>
+      <Text style={[styles.msgText, item.sender === 'user' ? styles.userText : styles.botText]}>{item.text}</Text>
+    </View>
+  );
 
   return (
-    <LinearGradient colors={["#18B949", "#1D492D"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.bg}>
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Chatbot</Text>
-
-        <TouchableOpacity onPress={() => setMenuVisible(true)} activeOpacity={0.7}>
-          <Feather name="menu" size={22} color="#fff" />
-        </TouchableOpacity>
+    <LinearGradient colors={["#1EBA56", "#143B28"]} style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={28} color="#fff" /></TouchableOpacity>
+        <Text style={styles.headerTitle}>HumAI Chatbot</Text>
+        <View style={{ width: 28 }} />
       </View>
 
-      {/* Body */}
-      <View style={styles.body}>
-        <Image
-          source={require("../assets/images/HumAI_logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.welcome}>Welcome to HumAI chatbot</Text>
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listPadding}
+      />
 
-        {/* Input */}
-        <View style={styles.inputRow}>
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#143B28" />
+      {isTyping && (
+        <View style={styles.typingIndicator}>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.typingText}> HumAI is analyzing...</Text>
+        </View>
+      )}
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={90}>
+        <View style={styles.inputArea}>
           <TextInput
-            placeholder="Ask anything"
-            placeholderTextColor="#cfe6d6"
             style={styles.input}
-            value={message}
-            onChangeText={setMessage}
-            returnKeyType="send"
-            onSubmitEditing={send}
+            placeholder="Type your question..."
+            value={inputText}
+            onChangeText={setInputText}
           />
-          <TouchableOpacity onPress={send} activeOpacity={0.8} style={styles.sendBtn}>
-            <Ionicons name="send" size={18} color="#143B28" />
+          <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
+            <Ionicons name="send" size={24} color="#1EBA56" />
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity onPress={() => router.push("/faqs")} activeOpacity={0.7}>
-          <Text style={styles.link}>View FAQs</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/*  Menu Overlay + Dropdown */}
-      {menuVisible && (
-        <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdownMenu}>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push("/dashboard");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Dashboard</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push("/profile");
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Profile</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
-                  <Text style={styles.dropdownText}>Logout</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
-const DARK = "#143B28";
-const CHIP = "#2C6B46";
-
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
-
-  topBar: {
-    paddingTop: 56,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    zIndex: 5,
-  },
-  title: { color: "#fff", fontSize: 18, fontWeight: "700" },
-
-  body: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    alignItems: "center",
-  },
-  logo: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#ffffff22",
-    marginBottom: 16,
-  },
-  welcome: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "800",
-    alignSelf: "flex-start",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-
-  inputRow: {
-    width: "100%",
-    backgroundColor: CHIP,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  input: {
-    flex: 1,
-    color: "#fff",
-    fontWeight: "700",
-  },
-  sendBtn: {
-    backgroundColor: "#D9F1DF",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  link: {
-    color: "#EAFBEF",
-    marginTop: 14,
-    textDecorationLine: "underline",
-  },
-
-  /* ⬇️ Menu overlay styles */
-  menuOverlay: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 2000, // sits above everything
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 56 + 8, // just below top bar (matches paddingTop)
-    right: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 6,
-    width: 170,
-
-    // shadow (iOS)
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-    // elevation (Android)
-    elevation: 16,
-
-    zIndex: 2100,
-  },
-  dropdownItem: { paddingHorizontal: 16, paddingVertical: 12 },
-  dropdownText: { fontSize: 16, color: DARK, fontWeight: "700" },
+  container: { flex: 1 },
+  header: { paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.2)' },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  listPadding: { padding: 20, paddingBottom: 30 },
+  msgBubble: { padding: 14, borderRadius: 18, marginBottom: 12, maxWidth: '85%' },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: '#fff', borderBottomRightRadius: 2 },
+  botBubble: { alignSelf: 'flex-start', backgroundColor: '#143B28', borderBottomLeftRadius: 2, borderWidth: 1, borderColor: '#1EBA56' },
+  msgText: { fontSize: 15, lineHeight: 20 },
+  userText: { color: '#143B28' },
+  botText: { color: '#fff' },
+  inputArea: { flexDirection: 'row', padding: 15, backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, alignItems: 'center' },
+  input: { flex: 1, height: 45, backgroundColor: '#f2f2f2', borderRadius: 22, paddingHorizontal: 18, fontSize: 15 },
+  sendBtn: { marginLeft: 12 },
+  typingIndicator: { flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 10, alignItems: 'center' },
+  typingText: { color: '#fff', fontSize: 12, fontStyle: 'italic' }
 });

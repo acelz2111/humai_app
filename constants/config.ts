@@ -1,5 +1,5 @@
 // Assuming your existing structure. Adjust IP_ADDRESS as necessary.
-const IP_ADDRESS = "172.16.54.179"; 
+const IP_ADDRESS = "192.168.101.8"; 
 const BASE_URL = `http://${IP_ADDRESS}/HumAI`;
 
 export const API = {
@@ -7,6 +7,8 @@ export const API = {
     SIGNUP: `${BASE_URL}/backend/signup.php`,
     GET_DISEASE: `${BASE_URL}/backend/get_disease.php`,
     GET_DIAGNOSIS_COUNT: `${BASE_URL}/backend/get_diagnosis_count.php`,
+    GET_TOP_DISEASES: `${BASE_URL}/backend/get_top_diseases.php`,
+    GET_HISTORY: `${BASE_URL}/backend/get_history.php`,
     // ✅ NEW ENDPOINT for recent diagnosis
     GET_RECENT_DIAGNOSIS: `${BASE_URL}/backend/get_recent_diagnosis.php`, 
 };

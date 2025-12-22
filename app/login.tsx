@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 // CHANGE THIS TO YOUR PC LAN IP and XAMPP folder route
-const SERVER_URL = "http://172.16.54.179/myapp/login.php"; // <-- set your real LAN IP
+const SERVER_URL = "http://192.168.101.8/myapp/login.php"; // <-- set your real LAN IP
 
 export default function Login() {
   const router = useRouter();

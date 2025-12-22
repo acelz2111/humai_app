@@ -43,3 +43,104 @@ Stack trace:
 #0 C:\xampp\htdocs\HumAI\backend\get_recent_diagnosis.php(30): mysqli->prepare('SELECT d.confid...')
 #1 {main}
   thrown in C:\xampp\htdocs\HumAI\backend\get_recent_diagnosis.php on line 30
+[17-Dec-2025 07:11:54 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:20
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(20): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 20
+[17-Dec-2025 07:15:59 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:20
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(20): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 20
+[17-Dec-2025 07:23:58 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:20
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(20): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 20
+[17-Dec-2025 07:36:12 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:20
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(20): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 20
+[17-Dec-2025 07:38:33 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:20
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(20): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 20
+[17-Dec-2025 07:56:36 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:8
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(8): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 8
+[17-Dec-2025 08:01:30 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:21
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(21): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 21
+[17-Dec-2025 08:08:46 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:8
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(8): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 8
+[17-Dec-2025 08:15:08 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\signup.php:44
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(44): mysqli->prepare('INSERT INTO use...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 44
+[17-Dec-2025 08:19:54 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\signup.php:49
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(49): mysqli->prepare('INSERT INTO use...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 49
+[17-Dec-2025 08:20:03 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\signup.php:49
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(49): mysqli->prepare('INSERT INTO use...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 49
+[17-Dec-2025 08:20:06 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\signup.php:49
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(49): mysqli->prepare('INSERT INTO use...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 49
+[17-Dec-2025 08:23:09 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\signup.php:36
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(36): mysqli->prepare('INSERT INTO use...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 36
+[17-Dec-2025 08:26:05 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Invalid phone number format. It must be 10 digits long. in C:\xampp\htdocs\HumAI\backend\signup.php:58
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(58): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 58
+[17-Dec-2025 08:35:02 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Invalid phone number format. It must be 10 digits long. in C:\xampp\htdocs\HumAI\backend\signup.php:45
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\signup.php(45): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\signup.php on line 45
+[17-Dec-2025 08:53:30 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:8
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(8): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 8
+[17-Dec-2025 09:03:57 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'phone' in 'field list' in C:\xampp\htdocs\HumAI\backend\get_profile.php:8
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\get_profile.php(8): mysqli->prepare('SELECT first_na...')
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\get_profile.php on line 8
+[19-Dec-2025 04:04:27 Europe/Berlin] DB Connection Error: Access denied for user 'root'@'localhost' (using password: YES)
+[22-Dec-2025 05:01:36 Europe/Berlin] PHP Warning:  file_put_contents(uploads/scan_1766376096.jpg): Failed to open stream: No such file or directory in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 25
+[22-Dec-2025 05:05:52 Europe/Berlin] PHP Warning:  file_put_contents(uploads/scan_1766376352.jpg): Failed to open stream: No such file or directory in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 25
+[22-Dec-2025 05:06:21 Europe/Berlin] PHP Warning:  file_put_contents(uploads/scan_1766376381.jpg): Failed to open stream: No such file or directory in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 25
+[22-Dec-2025 05:06:37 Europe/Berlin] PHP Warning:  file_put_contents(uploads/scan_1766376397.jpg): Failed to open stream: No such file or directory in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 25
+[22-Dec-2025 05:09:25 Europe/Berlin] PHP Warning:  file_put_contents(uploads/scan_1766376565.jpg): Failed to open stream: No such file or directory in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 25
+[22-Dec-2025 07:57:46 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Got a packet bigger than 'max_allowed_packet' bytes in C:\xampp\htdocs\HumAI\backend\analyze_image.php:57
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\analyze_image.php(57): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 57
+[22-Dec-2025 08:01:35 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Got a packet bigger than 'max_allowed_packet' bytes in C:\xampp\htdocs\HumAI\backend\analyze_image.php:57
+Stack trace:
+#0 C:\xampp\htdocs\HumAI\backend\analyze_image.php(57): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\HumAI\backend\analyze_image.php on line 57

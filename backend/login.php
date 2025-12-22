@@ -1,62 +1,60 @@
 <?php
-// C:\xampp\htdocs\HumAI\backend\login.php
-
-// 1. SET HEADERS
-ob_clean();
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
-// 2. ENABLE ERROR DISPLAY (Temporarily, so we can see the crash in the App Log)
-error_reporting(E_ALL);
-ini_set('display_errors', 1); 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-// 3. DB CONNECTION
-$servername = "localhost";
-$username = "root";
-$password = "root123"; // You confirmed this works
-$dbname = "humai_db";    
+require_once 'db.php';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    echo json_encode(["success" => false, "message" => "DB Connection Failed: " . $conn->connect_error]);
-    exit();
+$input = file_get_contents("php://input");
+$data = json_decode($input);
+
+if (!$data || empty($data->email) || empty($data->password)) {
+    echo json_encode(["success" => false, "message" => "Email and password required."]);
+    exit;
 }
 
-// 4. GET INPUT
-$data = json_decode(file_get_contents("php://input"));
-if ($data === null) {
-    echo json_encode(["success" => false, "message" => "Invalid JSON input"]);
-    exit();
+$email = trim($data->email);
+$password = $data->password;
+
+try {
+    $sql = "SELECT id, password FROM user WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($user = $result->fetch_assoc()) {
+        $db_password = $user['password'];
+
+        // 1. Check if it's a modern hash
+        if (password_verify($password, $db_password)) {
+            $login_success = true;
+        } 
+        // 2. Fallback: Check if it's one of the old plain-text passwords
+        else if ($password === $db_password) {
+            $login_success = true;
+        } 
+        else {
+            $login_success = false;
+        }
+
+        if ($login_success) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Login successful",
+                "user" => ["id" => $user['id']]
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Incorrect password."]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "User not found."]);
+    }
+} catch (Exception $e) {
+    echo json_encode(["success" => false, "message" => "Server error."]);
 }
-
-$email = $data->email;
-$pass  = $data->password;
-
-// 5. QUERY DEBUGGING (The Critical Fix)
-$sql = "SELECT * FROM user WHERE email=? AND password=?";
-$stmt = $conn->prepare($sql);
-
-// CHECK IF PREPARE FAILED (This catches the "Table not found" crash)
-if (!$stmt) {
-    echo json_encode([
-        "success" => false, 
-        "message" => "SQL Error: " . $conn->error 
-    ]);
-    exit();
-}
-
-$stmt->bind_param("ss", $email, $pass);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-    unset($user['password']); 
-    echo json_encode(["success" => true, "user" => $user]);
-} else {
-    echo json_encode(["success" => false, "message" => "Invalid credentials"]);
-}
-
-$stmt->close();
 $conn->close();
 ?>

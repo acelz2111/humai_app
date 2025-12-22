@@ -1,40 +1,45 @@
 <?php
 // backend/db.php
 
-// Error reporting configuration
+// 1. Error reporting configuration
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Set to 0 in production
+ini_set('display_errors', 0); 
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php_errors.log');
 
-// CORS headers
+// 2. Mandatory CORS headers for React Native
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
-// Database connection settings
+// 3. Database connection settings
 $servername = "localhost";
 $username = "root";
-$password = "root123"; // Try empty first, change to "root123" if needed
-$dbname = "humai_db";
+$password = ""; // Standard XAMPP password is EMPTY. Change to "root123" only if you manually set one.
+$dbname = "humai_db2"; // Matches your uploaded humai_db.sql
 
-// Attempt connection
+// 4. Attempt connection
 try {
-    $conn = @new mysqli($servername, $username, $password, $dbname);
+    // We remove the '@' to let the try-catch block handle the connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
     
     if ($conn->connect_error) {
         throw new Exception("Connection Failed: " . $conn->connect_error);
     }
     
-    // Set charset to prevent encoding issues
+    // Set charset to prevent encoding issues with names/notes
     $conn->set_charset("utf8mb4");
     
 } catch (Exception $e) {
+    // If connection fails, send a JSON response so the app doesn't get a blank response
+    http_response_code(500); 
     echo json_encode([
         "success" => false, 
-        "message" => "Database connection error. Please try again later."
+        "message" => "Database connection error. Ensure MySQL is running in XAMPP."
     ]);
+    
+    // Log the actual error to your php_errors.log for your eyes only
     error_log("DB Connection Error: " . $e->getMessage());
     exit();
 }
